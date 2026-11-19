@@ -1,0 +1,769 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Primitive Helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedAdminEmail() {
+      return isVerifiedUser() && request.auth.token.email == 'vincentcasintahancarl@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdminEmail() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function hasCallerMemberDoc() {
+      return exists(/databases/$(database)/documents/members/$(request.auth.uid));
+    }
+
+    function callerMember() {
+      return get(/databases/$(database)/documents/members/$(request.auth.uid)).data;
+    }
+
+    function isCallerDisabled() {
+      return hasCallerMemberDoc() && callerMember().isDisabled == true;
+    }
+
+    function isApprovedTeacher() {
+      return isAdmin() || (
+        isVerifiedUser() &&
+        hasCallerMemberDoc() &&
+        callerMember().role == 'Teacher' &&
+        'teacherApprovalStatus' in callerMember() &&
+        callerMember().teacherApprovalStatus == 'approved' &&
+        callerMember().isDisabled == false
+      );
+    }
+
+    function isAuthorizedMonitor() {
+      return isAdmin() || (
+        isApprovedTeacher() &&
+        'isMonitor' in callerMember() &&
+        callerMember().isMonitor == true
+      );
+    }
+
+    function isValidSubjectId(val) {
+      return val in [
+        'mathematics',
+        'biology',
+        'physics',
+        'history',
+        'literature',
+        'computer_science',
+        'ict'
+      ];
+    }
+
+    function isValidRole(val) {
+      return val in ['Student', 'Teacher', 'Peer Tutor'];
+    }
+
+    function isValidApprovalStatus(val) {
+      return val in ['pending', 'approved', 'rejected'];
+    }
+
+    function isValidOptionalString(data, key, maxLen) {
+      return !(key in data) || (data[key] is string && data[key].size() <= maxLen);
+    }
+
+    function isValidOptionalTimestampOrNumber(data, key) {
+      return !(key in data) || data[key] is timestamp || data[key] is number;
+    }
+
+    // 3. Entity Validation Blueprints
+    function isValidMember(data) {
+      return data.keys().hasAll([
+          'id',
+          'uid',
+          'name',
+          'role',
+          'gradeOrDept',
+          'focusSubject',
+          'enrolledSubjects',
+          'isDisabled',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id',
+          'uid',
+          'name',
+          'username',
+          'avatarUrl',
+          'role',
+          'gradeOrDept',
+          'section',
+          'courseOrTrack',
+          'club',
+          'monitoredClub',
+          'focusSubject',
+          'enrolledSubjects',
+          'taughtSubjects',
+          'bio',
+          'isDisabled',
+          'disabledReason',
+          'disabledAt',
+          'disabledByMemberId',
+          'teacherApprovalStatus',
+          'teacherApprovedAt',
+          'teacherApprovedByMemberId',
+          'teacherApprovalNote',
+          'isOwner',
+          'isMonitor',
+          'monitorGrantedAt',
+          'monitorGrantedByMemberId',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        isValidId(data.id) &&
+        isValidId(data.uid) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+        isValidOptionalString(data, 'username', 40) &&
+        isValidOptionalString(data, 'avatarUrl', 180000) &&
+        isValidRole(data.role) &&
+        data.gradeOrDept is string && data.gradeOrDept.size() >= 1 && data.gradeOrDept.size() <= 100 &&
+        isValidOptionalString(data, 'section', 100) &&
+        isValidOptionalString(data, 'courseOrTrack', 140) &&
+        isValidOptionalString(data, 'club', 100) &&
+        isValidOptionalString(data, 'monitoredClub', 100) &&
+        isValidSubjectId(data.focusSubject) &&
+        data.enrolledSubjects is list && data.enrolledSubjects.size() >= 1 && data.enrolledSubjects.size() <= 7 &&
+        data.enrolledSubjects[0] is string &&
+        (
+          !('taughtSubjects' in data) ||
+          (data.taughtSubjects is list && data.taughtSubjects.size() >= 1 && data.taughtSubjects.size() <= 4 && data.taughtSubjects[0] is string)
+        ) &&
+        isValidOptionalString(data, 'bio', 600) &&
+        data.isDisabled is bool &&
+        isValidOptionalString(data, 'disabledReason', 400) &&
+        isValidOptionalTimestampOrNumber(data, 'disabledAt') &&
+        isValidOptionalString(data, 'disabledByMemberId', 128) &&
+        (!('teacherApprovalStatus' in data) || isValidApprovalStatus(data.teacherApprovalStatus)) &&
+        isValidOptionalTimestampOrNumber(data, 'teacherApprovedAt') &&
+        isValidOptionalString(data, 'teacherApprovedByMemberId', 128) &&
+        isValidOptionalString(data, 'teacherApprovalNote', 400) &&
+        (!('isOwner' in data) || data.isOwner is bool) &&
+        (!('isMonitor' in data) || data.isMonitor is bool) &&
+        isValidOptionalTimestampOrNumber(data, 'monitorGrantedAt') &&
+        isValidOptionalString(data, 'monitorGrantedByMemberId', 128) &&
+        (data.createdAt is timestamp || data.createdAt is number) &&
+        (data.updatedAt is timestamp || data.updatedAt is number);
+    }
+
+    function isValidUserPrivate(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'updatedAt']) &&
+        data.keys().hasOnly([
+          'uid',
+          'email',
+          'bookmarks',
+          'mailReads',
+          'studyGoal',
+          'streak',
+          'personalNotes',
+          'reminders',
+          'updatedAt'
+        ]) &&
+        data.uid == userId &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+        (!('bookmarks' in data) || (data.bookmarks is list && data.bookmarks.size() <= 500)) &&
+        (!('mailReads' in data) || data.mailReads is map) &&
+        (!('studyGoal' in data) || data.studyGoal is map) &&
+        (!('streak' in data) || data.streak is map) &&
+        (!('personalNotes' in data) || (data.personalNotes is list && data.personalNotes.size() <= 200)) &&
+        (!('reminders' in data) || (data.reminders is list && data.reminders.size() <= 200)) &&
+        (data.updatedAt is timestamp || data.updatedAt is number);
+    }
+
+    function isValidPost(data) {
+      return data.keys().hasAll([
+          'id',
+          'kind',
+          'subjectId',
+          'lessonId',
+          'authorId',
+          'title',
+          'body',
+          'createdAt',
+          'upvoterIds',
+          'replies'
+        ]) &&
+        data.keys().hasOnly([
+          'id',
+          'kind',
+          'subjectId',
+          'lessonId',
+          'gradeLevel',
+          'authorId',
+          'title',
+          'body',
+          'formulaNote',
+          'imageUrl',
+          'imageAlt',
+          'createdAt',
+          'upvoterIds',
+          'replies'
+        ]) &&
+        isValidId(data.id) &&
+        data.kind in ['question', 'idea'] &&
+        isValidSubjectId(data.subjectId) &&
+        isValidId(data.lessonId) &&
+        isValidOptionalString(data, 'gradeLevel', 40) &&
+        isValidId(data.authorId) &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 240 &&
+        data.body is string && data.body.size() >= 1 && data.body.size() <= 5000 &&
+        isValidOptionalString(data, 'formulaNote', 1000) &&
+        isValidOptionalString(data, 'imageUrl', 500000) &&
+        isValidOptionalString(data, 'imageAlt', 200) &&
+        (data.createdAt is timestamp || data.createdAt is number) &&
+        data.upvoterIds is list && data.upvoterIds.size() <= 1000 &&
+        (data.upvoterIds.size() == 0 || data.upvoterIds[0] is string) &&
+        data.replies is list && data.replies.size() <= 200 &&
+        (data.replies.size() == 0 || data.replies[0] is map);
+    }
+
+    function isValidLesson(data) {
+      return data.keys().hasAll([
+          'id',
+          'subjectId',
+          'unitNumber',
+          'title',
+          'summary',
+          'teacherName'
+        ]) &&
+        data.keys().hasOnly([
+          'id',
+          'subjectId',
+          'unitNumber',
+          'title',
+          'summary',
+          'teacherName',
+          'diagramUrl',
+          'diagramCaption',
+          'createdByUid'
+        ]) &&
+        isValidId(data.id) &&
+        isValidSubjectId(data.subjectId) &&
+        data.unitNumber is string && data.unitNumber.size() >= 1 && data.unitNumber.size() <= 40 &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 160 &&
+        data.summary is string && data.summary.size() >= 1 && data.summary.size() <= 2000 &&
+        data.teacherName is string && data.teacherName.size() >= 1 && data.teacherName.size() <= 100 &&
+        isValidOptionalString(data, 'diagramUrl', 2000) &&
+        isValidOptionalString(data, 'diagramCaption', 240) &&
+        isValidOptionalString(data, 'createdByUid', 128);
+    }
+
+    function isValidEvent(data) {
+      return data.keys().hasAll([
+          'id',
+          'title',
+          'description',
+          'category',
+          'subjectId',
+          'gradeLevel',
+          'startsAt',
+          'location',
+          'createdByMemberId',
+          'createdAt',
+          'attendeeIds'
+        ]) &&
+        data.keys().hasOnly([
+          'id',
+          'title',
+          'description',
+          'category',
+          'subjectId',
+          'gradeLevel',
+          'startsAt',
+          'location',
+          'clubName',
+          'createdByMemberId',
+          'createdAt',
+          'attendeeIds'
+        ]) &&
+        isValidId(data.id) &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 160 &&
+        data.description is string && data.description.size() >= 1 && data.description.size() <= 2000 &&
+        data.category in ['workshop', 'exam_prep', 'club_meet', 'assembly', 'competition'] &&
+        data.subjectId is string && data.subjectId.size() >= 1 && data.subjectId.size() <= 40 &&
+        data.gradeLevel is string && data.gradeLevel.size() >= 1 && data.gradeLevel.size() <= 40 &&
+        data.startsAt is number && data.startsAt > 0 &&
+        data.location is string && data.location.size() >= 1 && data.location.size() <= 160 &&
+        isValidOptionalString(data, 'clubName', 100) &&
+        isValidId(data.createdByMemberId) &&
+        (data.createdAt is timestamp || data.createdAt is number) &&
+        data.attendeeIds is list && data.attendeeIds.size() <= 1000 &&
+        (data.attendeeIds.size() == 0 || data.attendeeIds[0] is string);
+    }
+
+    function isValidFriendRequest(data) {
+      return data.keys().hasAll([
+          'id',
+          'senderId',
+          'receiverId',
+          'status',
+          'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id',
+          'senderId',
+          'receiverId',
+          'note',
+          'status',
+          'createdAt',
+          'respondedAt'
+        ]) &&
+        isValidId(data.id) &&
+        isValidId(data.senderId) &&
+        isValidId(data.receiverId) &&
+        isValidOptionalString(data, 'note', 240) &&
+        data.status in ['pending', 'accepted', 'declined'] &&
+        (data.createdAt is timestamp || data.createdAt is number) &&
+        isValidOptionalTimestampOrNumber(data, 'respondedAt');
+    }
+
+    function isValidReport(data) {
+      return data.keys().hasAll([
+          'id',
+          'targetType',
+          'postId',
+          'targetAuthorId',
+          'reporterId',
+          'reason',
+          'contentSnapshot',
+          'status',
+          'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id',
+          'targetType',
+          'postId',
+          'replyId',
+          'targetAuthorId',
+          'reporterId',
+          'reason',
+          'details',
+          'contentSnapshot',
+          'status',
+          'sourceLocation',
+          'createdAt',
+          'resolvedAt',
+          'resolvedByMemberId',
+          'resolutionNote'
+        ]) &&
+        isValidId(data.id) &&
+        data.targetType in ['post', 'reply'] &&
+        isValidId(data.postId) &&
+        isValidOptionalString(data, 'replyId', 128) &&
+        isValidId(data.targetAuthorId) &&
+        isValidId(data.reporterId) &&
+        data.reason is string && data.reason.size() >= 1 && data.reason.size() <= 300 &&
+        isValidOptionalString(data, 'details', 1000) &&
+        data.contentSnapshot is string && data.contentSnapshot.size() >= 1 && data.contentSnapshot.size() <= 1500 &&
+        data.status in ['pending', 'resolved', 'dismissed'] &&
+        (!('sourceLocation' in data) || data.sourceLocation in ['feed', 'thread', 'mail']) &&
+        (data.createdAt is timestamp || data.createdAt is number) &&
+        isValidOptionalTimestampOrNumber(data, 'resolvedAt') &&
+        isValidOptionalString(data, 'resolvedByMemberId', 128) &&
+        isValidOptionalString(data, 'resolutionNote', 500);
+    }
+
+    function isValidWarning(data) {
+      return data.keys().hasAll([
+          'id',
+          'targetMemberId',
+          'issuedByMemberId',
+          'level',
+          'reason',
+          'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id',
+          'targetMemberId',
+          'issuedByMemberId',
+          'level',
+          'reason',
+          'relatedContentPreview',
+          'createdAt',
+          'acknowledgedAt',
+          'clearedAt'
+        ]) &&
+        isValidId(data.id) &&
+        isValidId(data.targetMemberId) &&
+        isValidId(data.issuedByMemberId) &&
+        data.level in ['low', 'mid', 'critical'] &&
+        data.reason is string && data.reason.size() >= 1 && data.reason.size() <= 500 &&
+        isValidOptionalString(data, 'relatedContentPreview', 500) &&
+        (data.createdAt is timestamp || data.createdAt is number) &&
+        isValidOptionalTimestampOrNumber(data, 'acknowledgedAt') &&
+        isValidOptionalTimestampOrNumber(data, 'clearedAt');
+    }
+
+    // 4. Collection Rules
+    match /test/{docId} {
+      allow get: if isSignedIn();
+    }
+
+    match /admins/{userId} {
+      allow get: if isSignedIn() && (userId == request.auth.uid || isAdmin());
+      allow write: if isAdmin() && isValidId(userId);
+    }
+
+    match /members/{memberId} {
+      allow get: if isSignedIn() && isValidId(memberId);
+      allow list: if isSignedIn();
+
+      allow create: if isVerifiedUser() &&
+        isValidId(memberId) &&
+        isValidMember(incoming()) &&
+        incoming().id == memberId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            memberId == request.auth.uid &&
+            incoming().uid == request.auth.uid &&
+            incoming().isDisabled == false &&
+            !('disabledReason' in incoming()) &&
+            !('disabledAt' in incoming()) &&
+            !('disabledByMemberId' in incoming()) &&
+            !('teacherApprovedAt' in incoming()) &&
+            !('teacherApprovedByMemberId' in incoming()) &&
+            !('teacherApprovalNote' in incoming()) &&
+            (!('isOwner' in incoming()) || incoming().isOwner == false) &&
+            (!('isMonitor' in incoming()) || incoming().isMonitor == false) &&
+            !('monitorGrantedAt' in incoming()) &&
+            !('monitorGrantedByMemberId' in incoming()) &&
+            (
+              (incoming().role != 'Teacher' && !('teacherApprovalStatus' in incoming())) ||
+              (incoming().role == 'Teacher' && incoming().teacherApprovalStatus == 'pending')
+            )
+          )
+        );
+
+      allow update: if isVerifiedUser() &&
+        isValidId(memberId) &&
+        isValidMember(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          // Tier 1: App Owner (vincentcasintahancarl@gmail.com) controls Teacher approvals, Monitor assignments, and all account states
+          isAdmin() ||
+          // Tier 2: Owner-appointed Teacher Monitor may disable/re-enable non-Teacher, non-Owner student accounts
+          (
+            isAuthorizedMonitor() &&
+            memberId != request.auth.uid &&
+            existing().role != 'Teacher' &&
+            (!('isMonitor' in existing()) || existing().isMonitor != true) &&
+            incoming().role == existing().role &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'isDisabled',
+              'disabledReason',
+              'disabledAt',
+              'disabledByMemberId',
+              'updatedAt'
+            ])
+          ) ||
+          // Tier 3: Member updating own non-privileged profile fields (cannot self-approve or grant self Monitor)
+          (
+            memberId == request.auth.uid &&
+            existing().isDisabled == false &&
+            incoming().role == existing().role &&
+            incoming().isDisabled == existing().isDisabled &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'username',
+              'avatarUrl',
+              'gradeOrDept',
+              'section',
+              'courseOrTrack',
+              'club',
+              'monitoredClub',
+              'focusSubject',
+              'enrolledSubjects',
+              'taughtSubjects',
+              'bio',
+              'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isAdmin() && isValidId(memberId);
+    }
+
+    match /userPrivate/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (userId == request.auth.uid || isAdmin());
+      allow create: if isVerifiedUser() &&
+        isValidId(userId) &&
+        (userId == request.auth.uid || isAdmin()) &&
+        isValidUserPrivate(incoming(), userId) &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser() &&
+        isValidId(userId) &&
+        (userId == request.auth.uid || isAdmin()) &&
+        isValidUserPrivate(incoming(), userId) &&
+        incoming().uid == existing().uid &&
+        incoming().updatedAt == request.time;
+    }
+
+    match /posts/{postId} {
+      allow get: if isSignedIn() && isValidId(postId);
+      allow list: if isSignedIn();
+
+      allow create: if isVerifiedUser() &&
+        !isCallerDisabled() &&
+        isValidId(postId) &&
+        isValidPost(incoming()) &&
+        incoming().id == postId &&
+        incoming().createdAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            incoming().authorId == request.auth.uid &&
+            exists(/databases/$(database)/documents/lessons/$(incoming().lessonId))
+          )
+        );
+
+      allow update: if isVerifiedUser() &&
+        !isCallerDisabled() &&
+        isValidId(postId) &&
+        isValidPost(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().authorId == existing().authorId &&
+        incoming().createdAt == existing().createdAt &&
+        (
+          isAdmin() ||
+          isAuthorizedMonitor() ||
+          (
+            existing().authorId == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'title',
+              'body',
+              'formulaNote',
+              'replies',
+              'upvoterIds'
+            ])
+          ) ||
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['upvoterIds', 'replies']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['upvoterIds']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['replies'])
+          )
+        );
+
+      allow delete: if isVerifiedUser() &&
+        isValidId(postId) &&
+        (
+          isAdmin() ||
+          isAuthorizedMonitor() ||
+          (existing().authorId == request.auth.uid && !isCallerDisabled())
+        );
+    }
+
+    match /lessons/{lessonId} {
+      allow get: if isSignedIn() && isValidId(lessonId);
+      allow list: if isSignedIn();
+
+      allow create: if isVerifiedUser() &&
+        !isCallerDisabled() &&
+        isValidId(lessonId) &&
+        isValidLesson(incoming()) &&
+        incoming().id == lessonId &&
+        (isAdmin() || incoming().createdByUid == request.auth.uid);
+
+      allow update, delete: if isVerifiedUser() &&
+        isValidId(lessonId) &&
+        (isAdmin() || isApprovedTeacher());
+    }
+
+    match /events/{eventId} {
+      allow get: if isSignedIn() && isValidId(eventId);
+      allow list: if isSignedIn();
+
+      allow create: if isVerifiedUser() &&
+        (isAdmin() || isApprovedTeacher()) &&
+        isValidId(eventId) &&
+        isValidEvent(incoming()) &&
+        incoming().id == eventId &&
+        incoming().createdAt == request.time &&
+        (isAdmin() || incoming().createdByMemberId == request.auth.uid);
+
+      allow update: if isVerifiedUser() &&
+        !isCallerDisabled() &&
+        isValidId(eventId) &&
+        isValidEvent(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().createdByMemberId == existing().createdByMemberId &&
+        incoming().createdAt == existing().createdAt &&
+        (
+          isAdmin() ||
+          isApprovedTeacher() ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['attendeeIds'])
+        );
+
+      allow delete: if isVerifiedUser() &&
+        isValidId(eventId) &&
+        (isAdmin() || isApprovedTeacher());
+    }
+
+    match /friendRequests/{requestId} {
+      allow get: if isSignedIn() &&
+        isValidId(requestId) &&
+        (
+          resource.data.senderId == request.auth.uid ||
+          resource.data.receiverId == request.auth.uid ||
+          isAdmin()
+        );
+      allow list: if isSignedIn() &&
+        (
+          resource.data.senderId == request.auth.uid ||
+          resource.data.receiverId == request.auth.uid ||
+          isBootstrappedAdminEmail()
+        );
+
+      allow create: if isVerifiedUser() &&
+        !isCallerDisabled() &&
+        isValidId(requestId) &&
+        isValidFriendRequest(incoming()) &&
+        incoming().id == requestId &&
+        incoming().createdAt == request.time &&
+        incoming().senderId == request.auth.uid &&
+        incoming().receiverId != request.auth.uid &&
+        incoming().status == 'pending' &&
+        exists(/databases/$(database)/documents/members/$(incoming().receiverId));
+
+      allow update: if isVerifiedUser() &&
+        !isCallerDisabled() &&
+        isValidId(requestId) &&
+        isValidFriendRequest(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().senderId == existing().senderId &&
+        incoming().receiverId == existing().receiverId &&
+        incoming().createdAt == existing().createdAt &&
+        existing().status == 'pending' &&
+        request.auth.uid == existing().receiverId &&
+        incoming().status in ['accepted', 'declined'] &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'respondedAt']);
+
+      allow delete: if isVerifiedUser() &&
+        isValidId(requestId) &&
+        (
+          request.auth.uid == existing().senderId ||
+          request.auth.uid == existing().receiverId ||
+          isAdmin()
+        );
+    }
+
+    match /reports/{reportId} {
+      allow get: if isVerifiedUser() &&
+        isValidId(reportId) &&
+        (
+          resource.data.reporterId == request.auth.uid ||
+          isAuthorizedMonitor()
+        );
+      allow list: if isVerifiedUser() &&
+        (
+          resource.data.reporterId == request.auth.uid ||
+          isAuthorizedMonitor()
+        );
+
+      allow create: if isVerifiedUser() &&
+        !isCallerDisabled() &&
+        isValidId(reportId) &&
+        isValidReport(incoming()) &&
+        incoming().id == reportId &&
+        incoming().reporterId == request.auth.uid &&
+        incoming().status == 'pending' &&
+        incoming().createdAt == request.time &&
+        exists(/databases/$(database)/documents/posts/$(incoming().postId));
+
+      allow update: if isVerifiedUser() &&
+        isAuthorizedMonitor() &&
+        isValidId(reportId) &&
+        isValidReport(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().reporterId == existing().reporterId &&
+        incoming().postId == existing().postId &&
+        incoming().createdAt == existing().createdAt &&
+        (isAdmin() || existing().status == 'pending') &&
+        incoming().status in ['resolved', 'dismissed'] &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'status',
+          'resolvedAt',
+          'resolvedByMemberId',
+          'resolutionNote'
+        ]);
+    }
+
+    match /warnings/{warningId} {
+      allow get: if isVerifiedUser() &&
+        isValidId(warningId) &&
+        (
+          resource.data.targetMemberId == request.auth.uid ||
+          isAuthorizedMonitor()
+        );
+      allow list: if isVerifiedUser() &&
+        (
+          resource.data.targetMemberId == request.auth.uid ||
+          isAuthorizedMonitor()
+        );
+
+      allow create: if isVerifiedUser() &&
+        isAuthorizedMonitor() &&
+        isValidId(warningId) &&
+        isValidWarning(incoming()) &&
+        incoming().id == warningId &&
+        incoming().createdAt == request.time &&
+        (isAdmin() || incoming().issuedByMemberId == request.auth.uid) &&
+        exists(/databases/$(database)/documents/members/$(incoming().targetMemberId));
+
+      allow update: if isVerifiedUser() &&
+        isValidId(warningId) &&
+        isValidWarning(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().targetMemberId == existing().targetMemberId &&
+        incoming().issuedByMemberId == existing().issuedByMemberId &&
+        incoming().level == existing().level &&
+        incoming().reason == existing().reason &&
+        incoming().createdAt == existing().createdAt &&
+        (
+          (
+            isAuthorizedMonitor() &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['clearedAt'])
+          ) ||
+          (
+            request.auth.uid == existing().targetMemberId &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['acknowledgedAt'])
+          )
+        );
+    }
+  }
+}

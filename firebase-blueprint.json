@@ -1,0 +1,652 @@
+{
+  "entities": {
+    "SchoolMember": {
+      "title": "SchoolMember",
+      "description": "Public classroom profile for a student, peer tutor, or faculty teacher (no PII).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "username": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 40
+        },
+        "avatarUrl": {
+          "type": "string",
+          "maxLength": 180000
+        },
+        "role": {
+          "type": "string",
+          "enum": ["Student", "Teacher", "Peer Tutor"]
+        },
+        "gradeOrDept": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "section": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "courseOrTrack": {
+          "type": "string",
+          "maxLength": 140
+        },
+        "club": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "monitoredClub": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "focusSubject": {
+          "type": "string",
+          "enum": [
+            "mathematics",
+            "biology",
+            "physics",
+            "history",
+            "literature",
+            "computer_science",
+            "ict"
+          ]
+        },
+        "enrolledSubjects": {
+          "type": "array",
+          "description": "List of enrolled or taught SubjectIds (max 7)."
+        },
+        "taughtSubjects": {
+          "type": "array",
+          "description": "3 to 4 SubjectIds taught by a teacher (max 4)."
+        },
+        "bio": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "isDisabled": {
+          "type": "boolean"
+        },
+        "disabledReason": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "disabledAt": {
+          "type": "number"
+        },
+        "disabledByMemberId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "teacherApprovalStatus": {
+          "type": "string",
+          "enum": ["pending", "approved", "rejected"]
+        },
+        "teacherApprovedAt": {
+          "type": "number"
+        },
+        "teacherApprovedByMemberId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "teacherApprovalNote": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "isOwner": {
+          "type": "boolean",
+          "description": "True only for the App Owner account."
+        },
+        "isMonitor": {
+          "type": "boolean",
+          "description": "True only when the App Owner has granted Teacher Monitor permissions."
+        },
+        "monitorGrantedAt": {
+          "type": "number"
+        },
+        "monitorGrantedByMemberId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "number"
+        },
+        "updatedAt": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "uid",
+        "name",
+        "role",
+        "gradeOrDept",
+        "focusSubject"
+      ]
+    },
+    "UserPrivate": {
+      "title": "UserPrivate",
+      "description": "Owner-isolated PII and private study workspace state.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 200
+        },
+        "bookmarks": {
+          "type": "array"
+        },
+        "mailReads": {
+          "type": "object"
+        },
+        "studyGoal": {
+          "type": "object"
+        },
+        "streak": {
+          "type": "object"
+        },
+        "personalNotes": {
+          "type": "array"
+        },
+        "reminders": {
+          "type": "array"
+        },
+        "updatedAt": {
+          "type": "number"
+        }
+      },
+      "required": ["uid", "email"]
+    },
+    "DiscussionPost": {
+      "title": "DiscussionPost",
+      "description": "Classroom Q&A post or shared study idea with embedded replies.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["question", "idea"]
+        },
+        "subjectId": {
+          "type": "string",
+          "enum": [
+            "mathematics",
+            "biology",
+            "physics",
+            "history",
+            "literature",
+            "computer_science",
+            "ict"
+          ]
+        },
+        "lessonId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "gradeLevel": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "authorId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000
+        },
+        "formulaNote": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "imageUrl": {
+          "type": "string",
+          "maxLength": 500000
+        },
+        "imageAlt": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "createdAt": {
+          "type": "number"
+        },
+        "upvoterIds": {
+          "type": "array"
+        },
+        "replies": {
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "subjectId",
+        "lessonId",
+        "authorId",
+        "title",
+        "body",
+        "createdAt",
+        "upvoterIds",
+        "replies"
+      ]
+    },
+    "LessonUnit": {
+      "title": "LessonUnit",
+      "description": "Curriculum lesson unit for a school subject.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "subjectId": {
+          "type": "string",
+          "enum": [
+            "mathematics",
+            "biology",
+            "physics",
+            "history",
+            "literature",
+            "computer_science",
+            "ict"
+          ]
+        },
+        "unitNumber": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "teacherName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "diagramUrl": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "diagramCaption": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "createdByUid": {
+          "type": "string",
+          "maxLength": 128
+        }
+      },
+      "required": ["id", "subjectId", "unitNumber", "title", "summary", "teacherName"]
+    },
+    "SchoolEvent": {
+      "title": "SchoolEvent",
+      "description": "Faculty-published school, academic, or club event.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "category": {
+          "type": "string",
+          "enum": ["workshop", "exam_prep", "club_meet", "assembly", "competition"]
+        },
+        "subjectId": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "gradeLevel": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "startsAt": {
+          "type": "number"
+        },
+        "location": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "clubName": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "createdByMemberId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "number"
+        },
+        "attendeeIds": {
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "description",
+        "category",
+        "subjectId",
+        "gradeLevel",
+        "startsAt",
+        "location",
+        "createdByMemberId",
+        "createdAt",
+        "attendeeIds"
+      ]
+    },
+    "FriendRequest": {
+      "title": "FriendRequest",
+      "description": "Peer-to-peer study friend request.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "senderId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "receiverId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "accepted", "declined"]
+        },
+        "createdAt": {
+          "type": "number"
+        },
+        "respondedAt": {
+          "type": "number"
+        }
+      },
+      "required": ["id", "senderId", "receiverId", "status", "createdAt"]
+    },
+    "ContentReport": {
+      "title": "ContentReport",
+      "description": "Flagged post or reply submitted to Teacher Monitor.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "targetType": {
+          "type": "string",
+          "enum": ["post", "reply"]
+        },
+        "postId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "replyId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "targetAuthorId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "reporterId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "details": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "contentSnapshot": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1500
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "resolved", "dismissed"]
+        },
+        "sourceLocation": {
+          "type": "string",
+          "enum": ["feed", "thread", "mail"]
+        },
+        "createdAt": {
+          "type": "number"
+        },
+        "resolvedAt": {
+          "type": "number"
+        },
+        "resolvedByMemberId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "resolutionNote": {
+          "type": "string",
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "id",
+        "targetType",
+        "postId",
+        "targetAuthorId",
+        "reporterId",
+        "reason",
+        "contentSnapshot",
+        "status",
+        "createdAt"
+      ]
+    },
+    "AccountWarning": {
+      "title": "AccountWarning",
+      "description": "Conduct warning issued by faculty to a member.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "targetMemberId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "issuedByMemberId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "level": {
+          "type": "string",
+          "enum": ["low", "mid", "critical"]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "relatedContentPreview": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "number"
+        },
+        "acknowledgedAt": {
+          "type": "number"
+        },
+        "clearedAt": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "targetMemberId",
+        "issuedByMemberId",
+        "level",
+        "reason",
+        "createdAt"
+      ]
+    },
+    "AdminMarker": {
+      "title": "AdminMarker",
+      "description": "Explicit admin UID allowlist document.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "grantedAt": {
+          "type": "number"
+        }
+      },
+      "required": ["uid"]
+    },
+    "TestConnection": {
+      "title": "TestConnection",
+      "description": "Firestore connectivity check document.",
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "firestore": {
+    "/members/{memberId}": {
+      "schema": { "$ref": "#/entities/SchoolMember" },
+      "description": "Public classroom profiles and teacher approval statuses."
+    },
+    "/userPrivate/{userId}": {
+      "schema": { "$ref": "#/entities/UserPrivate" },
+      "description": "Owner-only PII (email) and personal bookmarks, mail reads, goals, streaks, notes, and reminders."
+    },
+    "/posts/{postId}": {
+      "schema": { "$ref": "#/entities/DiscussionPost" },
+      "description": "Classroom Q&A posts and study ideas."
+    },
+    "/lessons/{lessonId}": {
+      "schema": { "$ref": "#/entities/LessonUnit" },
+      "description": "Subject curriculum lesson units."
+    },
+    "/events/{eventId}": {
+      "schema": { "$ref": "#/entities/SchoolEvent" },
+      "description": "School and club events managed by faculty."
+    },
+    "/friendRequests/{requestId}": {
+      "schema": { "$ref": "#/entities/FriendRequest" },
+      "description": "Cross-user study friend requests."
+    },
+    "/reports/{reportId}": {
+      "schema": { "$ref": "#/entities/ContentReport" },
+      "description": "Reported posts and messages for Teacher Monitor review."
+    },
+    "/warnings/{warningId}": {
+      "schema": { "$ref": "#/entities/AccountWarning" },
+      "description": "Conduct warnings issued to accounts with Stamp Check acknowledgment."
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/AdminMarker" },
+      "description": "Admin UIDs."
+    },
+    "/test/{docId}": {
+      "schema": { "$ref": "#/entities/TestConnection" },
+      "description": "Connection health check."
+    }
+  }
+}

@@ -1,0 +1,102 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+
+    --theme-accent: #7C1D1D;
+    --theme-accent-hover: #631616;
+    --theme-accent-active: #4D1010;
+    --theme-accent-bright: #991B1B;
+    --theme-accent-text: #7C1D1D;
+    --theme-accent-soft: #FAF3F1;
+    --theme-accent-soft-hover: #F3E5E2;
+    --theme-accent-border: #E5C9C5;
+    --theme-accent-rgb: 124, 29, 29;
+    --theme-canvas: #F6F2E9;
+
+    --theme-ink: #1C1917;
+    --theme-paper: #FFFDF8;
+    --theme-paper-muted: #F5F0E6;
+    --theme-rule: #E2D9C6;
+    --theme-brass: #8C6D3B;
+  }
+
+  .dark {
+    --theme-ink: #F7F3EA;
+    --theme-paper: #161412;
+    --theme-paper-muted: #201D1A;
+    --theme-rule: #3D362D;
+    --theme-brass: #D4B475;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--theme-canvas);
+    color: var(--theme-ink);
+    overflow-x: clip;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+  }
+
+  code, pre, .font-mono {
+    font-family: var(--font-mono);
+  }
+
+  @media (max-width: 639px) {
+    input:not([type='checkbox']):not([type='radio']):not([type='color']):not([type='file']),
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.heritage-card {
+  background-color: var(--theme-paper);
+  border-color: var(--theme-rule);
+  box-shadow: inset 0 0 0 1px rgba(140, 109, 59, 0.08);
+}
+
+.dark .heritage-card {
+  box-shadow: inset 0 0 0 1px rgba(212, 180, 117, 0.14);
+}
+
+.heritage-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--theme-brass);
+}

@@ -1,0 +1,6 @@
+{
+  "name": "StudyCommons",
+  "description": "A collaborative school platform for students and teachers to ask questions about lessons, share study ideas, and build shared class understanding.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
